@@ -1,0 +1,31 @@
+// src/main.ts
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { AppModule } from './app.module';
+import { SocketIOAdapter } from './socket-io.adapter';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  // CORS para peticiones HTTP normales
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
+
+  // Validación global
+  app.useGlobalPipes(new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  }));
+
+  // Configurar el adaptador personalizado de Socket.IO con CORS
+  app.useWebSocketAdapter(new SocketIOAdapter(app));
+
+  await app.listen(3000);
+
+  console.log('🚀 Backend + Socket.IO corriendo en http://localhost:3000');
+  console.log('🎮 WebSocket Gateway listo para conexiones');
+}
+bootstrap();
