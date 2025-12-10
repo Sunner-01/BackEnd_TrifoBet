@@ -23,9 +23,10 @@ async function bootstrap() {
   // Configurar el adaptador personalizado de Socket.IO con CORS
   app.useWebSocketAdapter(new SocketIOAdapter(app));
 
-  await app.listen(3000);
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
 
-  console.log('🚀 Backend + Socket.IO corriendo en http://localhost:3000');
+  console.log(`🚀 Backend + Socket.IO corriendo en http://localhost:${port}`);
   console.log('🎮 WebSocket Gateway listo para conexiones');
 }
 bootstrap();
