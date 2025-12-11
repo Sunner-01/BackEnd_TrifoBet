@@ -12,11 +12,7 @@ import { ChickenRoadService } from './chicken_road.service';
 import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({
-    cors: {
-        origin: '*',
-        credentials: true,
-    },
-    // namespace: '/chicken', // Removed to match client connection to root
+    cors: { origin: '*', credentials: true },
 })
 export class ChickenRoadGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
@@ -25,46 +21,53 @@ export class ChickenRoadGateway implements OnGatewayConnection, OnGatewayDisconn
     constructor(
         private chickenService: ChickenRoadService,
         private jwtService: JwtService,
-    ) { }
+    ) {}
 
     async handleConnection(client: Socket) {
-        // Authentication logic similar to Blackjack
         try {
             const token =
                 client.handshake.auth?.token ||
                 client.handshake.headers?.authorization?.split(' ')?.[1];
 
             if (!token) {
+                console.log('Chicken: No token → desconectando');
                 client.disconnect();
                 return;
             }
 
             const decoded = this.jwtService.verify(token);
             client.data.userId = decoded.sub.toString();
-            console.log(`🐔 Cliente Chicken conectado: ${client.data.userId}`);
+            client.data.username = decoded.username || 'Jugador'; // ← AÑADIDO
+
+            console.log(`Cliente Chicken conectado: ${client.data.userId} (${client.data.username})`);
         } catch (error) {
+            console.error('Error autenticación Chicken:', error.message);
             client.disconnect();
         }
     }
 
     handleDisconnect(client: Socket) {
-        console.log(`🐔 Cliente Chicken desconectado: ${client.data.userId}`);
+        console.log(`Cliente Chicken desconectado: ${client.data.userId}`);
     }
 
+    // ← ESTE ERA EL PROBLEMA: no estabas enviando username + balance
     @SubscribeMessage('joinChickenGame')
     async handleJoin(@ConnectedSocket() client: Socket) {
         const userId = client.data.userId;
         if (!userId) return;
 
         const state = await this.chickenService.initGame(userId);
-        client.emit('chickenGameState', state);
+
+        console.log('Chicken: Enviando init →', { userId, username: state.username, balance: state.balance });
+
+        client.emit('chickenGameState', {
+            balance: state.balance,
+            username: state.username,
+        });
     }
 
     @SubscribeMessage('placeChickenBet')
-    async handleBet(
-        @MessageBody() data: { amount: number },
-        @ConnectedSocket() client: Socket,
-    ) {
+    async handleBet(@MessageBody() data: { amount: number }, @ConnectedSocket() client: Socket) {
         const userId = client.data.userId;
         try {
             const result = await this.chickenService.processBet(userId, data.amount);
@@ -81,11 +84,7 @@ export class ChickenRoadGateway implements OnGatewayConnection, OnGatewayDisconn
     ) {
         const userId = client.data.userId;
         try {
-            const result = await this.chickenService.processResult(
-                userId,
-                data.bet,
-                data.won,
-            );
+            const result = await this.chickenService.processResult(userId, data.bet, data.won);
             client.emit('chickenGameFinished', result);
         } catch (error) {
             console.error('Error processing chicken result', error);

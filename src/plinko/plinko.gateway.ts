@@ -50,7 +50,7 @@ export class PlinkoGateway implements OnGatewayConnection, OnGatewayDisconnect {
             });
 
             client.data.userId = payload.sub.toString();
-            client.data.username = payload.nombre_usuario;
+        client.data.username = payload.username || 'Jugador';
 
             console.log(`✅ Cliente Plinko conectado:`);
             console.log(`   - UserID: ${client.data.userId}`);

@@ -40,10 +40,12 @@ export class TragamonedasGateway implements OnGatewayConnection, OnGatewayDiscon
 
             const payload = this.jwtService.verify(token, {
                 secret: this.configService.get('JWT_SECRET'),
+                
             });
+            console.log('JWT Payload completo:', JSON.stringify(payload));
 
             client.data.userId = payload.sub.toString();
-            client.data.username = payload.nombre_usuario;
+client.data.username = payload.username || 'Jugador';
             console.log(`Cliente Tragamonedas conectado: ${client.data.userId}`);
         } catch (error) {
             console.error('Error de autenticación en Tragamonedas:', error.message);
@@ -82,7 +84,7 @@ export class TragamonedasGateway implements OnGatewayConnection, OnGatewayDiscon
         try {
             const result = await this.tragamonedasService.spin(userId, data.totalBet);
             // Emit result to the specific client
-            client.emit('tragamonedasSpinResult', result);
+           client.emit('tragamonedasResult', result);
         } catch (error) {
             client.emit('tragamonedasError', { message: error.message });
         }
